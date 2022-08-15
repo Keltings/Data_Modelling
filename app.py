@@ -238,6 +238,7 @@ def create_venue_submission():
   error = False
   #get the data
   form = VenueForm()
+  body = {}
   #venue = Venue.query.filter_by(id=venue_id).first()
   if form.validate():
 
@@ -459,20 +460,24 @@ def edit_artist_submission(artist_id):
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
   form = VenueForm()
-  venue={
-    "id": 1,
-    "name": "The Musical Hop",
-    "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
-    "address": "1015 Folsom Street",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "123-123-1234",
-    "website": "https://www.themusicalhop.com",
-    "facebook_link": "https://www.facebook.com/TheMusicalHop",
-    "seeking_talent": True,
-    "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
-    "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60"
-  }
+  queried_venue = Venue.query.filter_by(id=venue_id).first()
+  
+  if queried_venue:
+    venue = Venue(
+        name= request.form['name'],
+        city = request.form['city'],
+        state= request.form['state'],
+        address= request.form['address'],
+        phone= request.form['phone'],
+        image_link= request.form['image_link'],
+        facebook_link= request.form['facebook_link'],
+        website_link= request.form['website_link'],
+        looking_talent = request.form['looking_talent '],
+        seeking_description = request.form['seeking_description '],
+        genres= request.form.getlist('genres'),
+      
+    ) 
+
   # TODO: populate form with values from venue with ID <venue_id>
   return render_template('forms/edit_venue.html', form=form, venue=venue)
 
@@ -499,52 +504,53 @@ def create_artist_submission():
   form = ArtistForm()
   body = {}
   error=False
-  try:
-    name = request.form['name']
-    city = request.form['city']
-    state = request.form['state']
-    phone = request.form['phone']
-    genres = request.form.getlist('genres')
-    image_link = request.form['image_link']
-    facebook_link = request.form['facebook_link']
-    website = form.form['website']
-    seeking_venue = request.form['seeking_venue']
-    looking_description = request.form['looking_description']
-    
-    artist = Artist(
-      name=name, city=city, state=state, phone=phone, genres=genres,
-      image_link=image_link, facebook_link=facebook_link,website=website,
-      seeking_venue=seeking_venue, looking_description=looking_description
-    )
-    
-    db.session.add(artist)
-    db.session.commit()
-    body['id'] = artist.id
-    body['name'] = artist.name
-    body['city'] = artist.city
-    body['state'] = artist.state
-    body['phone'] = artist.phone
-    body['genres'] = artist.genres
-    body['image_link'] = artist.image_link
-    body['facebook_link'] = artist.facebook_link
-    body['website'] = artist.website
-    body['seeking_venue'] = artist.seeking_venue
-    body['looking_description'] = artist.looking_description
+  if form.validate():
+    try:
+      name = request.form['name']
+      city = request.form['city']
+      state = request.form['state']
+      phone = request.form['phone']
+      genres = request.form.getlist('genres')
+      image_link = request.form['image_link']
+      facebook_link = request.form['facebook_link']
+      website = request.form['website']
+      seeking_venue = request.form['seeking_venue']
+      looking_description = request.form['looking_description']
+      
+      artist = Artist(
+        name=name, city=city, state=state, phone=phone, genres=genres,
+        image_link=image_link, facebook_link=facebook_link,website=website,
+        seeking_venue=seeking_venue, looking_description=looking_description
+      )
+      
+      db.session.add(artist)
+      db.session.commit()
+      body['id'] = artist.id
+      body['name'] = artist.name
+      body['city'] = artist.city
+      body['state'] = artist.state
+      body['phone'] = artist.phone
+      body['genres'] = artist.genres
+      body['image_link'] = artist.image_link
+      body['facebook_link'] = artist.facebook_link
+      body['website'] = artist.website
+      body['seeking_venue'] = artist.seeking_venue
+      body['looking_description'] = artist.looking_description
+      # on successful db insert, flash success
+      flash('Artist ' + request.form['name'] + ' was successfully listed!')
+
     # on successful db insert, flash success
-    flash('Artist ' + request.form['name'] + ' was successfully listed!')
+    
+    # TODO: on unsuccessful db insert, flash an error instead.
+    except:
+      error=True
+      db.session.rollback()
+      flash('An error occurred. Artist ' + ' could not be listed.')
+      print(sys.exc_info())
 
-  # on successful db insert, flash success
-  
-  # TODO: on unsuccessful db insert, flash an error instead.
-  except:
-    error=True
-    db.session.rollback()
-    flash(flash('An error occurred. Artist ' + artist.name + ' could not be listed.'))
-    print(sys.exc_info())
-
-  finally:
-    db.session.close()
-  # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
+    finally:
+      db.session.close()
+    # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
   return render_template('pages/home.html')
 
 
