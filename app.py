@@ -15,6 +15,7 @@ from flask_wtf import Form
 from forms import *
 from flask_migrate import Migrate
 import sys
+from models import Venue, Show, Artist
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -30,69 +31,7 @@ migrate = Migrate(app, db)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:#Datascience1@localhost:5432/postgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-#----------------------------------------------------------------------------#
-# Models.
-#----------------------------------------------------------------------------#
 
-class Venue(db.Model):
-    __tablename__ = 'Venue'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    city = db.Column(db.String(120), nullable=False)
-    state = db.Column(db.String(120), nullable=False)
-    address = db.Column(db.String(120), nullable=False)
-    phone = db.Column(db.String(120), nullable=False)
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
-    website_link = db.Column(db.String())
-    looking_talent = db.Column(db.Boolean, default=True)
-    seeking_description = db.Column(db.String())
-    genres = db.Column("genres", db.ARRAY(db.String()), nullable=False)
-    shows = db.relationship('Show', backref='venue', lazy=True)
-
-    #debugging statements when printing the objects
-    def __repr__(self):
-        return f'<Venue {self.id} {self.name}>'
-
-
-class Artist(db.Model):
-    __tablename__ = 'Artist'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(), nullable=False)
-    city = db.Column(db.String(120), nullable=False)
-    state = db.Column(db.String(120), nullable=False)
-    phone = db.Column(db.String(120), nullable=False)
-    genres = db.Column(db.String(120), nullable=False)
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
-    website = db.Column(db.String(500))
-    seeking_venue = db.Column(db.Boolean, default=True)
-    looking_description = db.Column(db.String())
-    genres = db.Column("genres", db.ARRAY(db.String()), nullable=False)
-    shows = db.relationship('Show', backref='artist', lazy=True)
-
-    def __repr__(self):
-        return f'<Artist {self.id} {self.name}>'
-
-# TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
-#db.create_all()
-class Show(db.Model):
-    __tablename__ = 'Show'
-    id = db.Column(db.Integer, primary_key=True)
-    artist_id = db.Column(db.Integer, db.ForeignKey(
-        'Artist.id'), nullable=False)
-    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), nullable=False)
-    start_time = db.Column(db.DateTime, nullable=False,
-                           default=datetime.utcnow)
-
-    def __repr__(self):
-        return f'<Show {self.id}, Artist {self.artist_id}, Venue {self.venue_id}>'
 #----------------------------------------------------------------------------#
 # Filters.
 #----------------------------------------------------------------------------#
@@ -228,35 +167,36 @@ def show_venue(venue_id):
 
 @app.route('/venues/create', methods=['GET'])
 def create_venue_form():
-  form = VenueForm()
+  form = VenueForm(request.form)
   return render_template('forms/new_venue.html', form=form)
 
-@app.route('/venues/create', methods=['POST'])
+@app.route('/venues/create/', methods=['POST'])
 def create_venue_submission():
   # TODO: insert form data as a new Venue record in the db, instead
   # TODO: modify data to be the data object returned from db insertion
   error = False
   #get the data
-  form = VenueForm()
-  body = {}
+  form = VenueForm(request.form)
+  
   #venue = Venue.query.filter_by(id=venue_id).first()
   if form.validate():
 
     try:
 
       venue = Venue(
-        name= request.form['name'],
-        city = request.form['city'],
-        state= request.form['state'],
-        address= request.form['address'],
-        phone= request.form['phone'],
-        image_link= request.form['image_link'],
-        facebook_link= request.form['facebook_link'],
-        website_link= request.form['website_link'],
-        looking_talent = request.form['looking_talent '],
-        seeking_description = request.form['seeking_description '],
+        form.name.data,
+        form.city.data,
+        form.state.data,
+        form.address.data,
+        form.phone.data,
+        form.image_link.data,
+        form.facebook_link.data,
+        form.website_link.data,
+        form.looking_talent.data,
+        form.seeking_description.data,
+        #
         genres= request.form.getlist('genres'),
-      
+  
     ) 
       db.session.add(venue)
       db.session.commit()
@@ -297,7 +237,7 @@ def delete_venue(venue_id):
 
 #  Artists
 #  ----------------------------------------------------------------
-@app.route('/artists')
+@app.route('/artists/')
 def artists():
   # TODO: replace with real data returned from querying the database
   data=[]
@@ -360,18 +300,18 @@ def show_artist(artist_id):
                 })
   if queried_artist:
     artist={
-      "id": artists.id,
-      "name":artists.name,
-      "city": artists.city,
-      "state": artists.state,
-      "phone": artists.phone,
-      "genres": artists.genres,
-      "address": artists.address,
-      "image_link": artists.image_link,
-      "facebook_link": artists.facebook_link,
-      "website": artists.website,
-      "looking_talent": artists.looking_talent,
-      "seeking_description": artists.seeking_description,
+      "id": queried_artist.id,
+      "name":queried_artist.name,
+      "city": queried_artist.city,
+      "state": queried_artist.state,
+      "phone": queried_artist.phone,
+      "genres": queried_artist.genres,
+      "address": queried_artist.address,
+      "image_link": queried_artist.image_link,
+      "facebook_link": queried_artist.facebook_link,
+      "website": queried_artist.website,
+      "looking_talent": queried_artist.looking_talent,
+      "seeking_description": queried_artist.seeking_description,
       "past_shows": past_shows,
       "upcoming_shows": new_shows,
       "past_shows_count": len(past_shows),

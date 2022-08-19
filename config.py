@@ -10,4 +10,7 @@ DEBUG = True
 
 
 # TODO IMPLEMENT DATABASE URL
-SQLALCHEMY_DATABASE_URI = 'http://127.0.0.1:5000/'
+SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:#Datascience1@localhost:5432/postgres'
+DATABASE ='postgresql.db'
+
+DATABASE_PATH = os.path.join(basedir, DATABASE)
