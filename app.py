@@ -62,36 +62,29 @@ def index():
 def venues():
   # TODO: replace with real venues data.
   #       num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
-  data=[]
+  """data=[]
   #query all the venues in the db
   venues = Venue.query.all()
-  areas = set()
   
+  
+  for venue in venues:
+    new_show = db.session.query(Show).filter(Show.venue_id==venue.id).filter(Show.start_time > datetime.now()).all()
+    data.append({
+      'id': venue.id,
+      'name': venue.name,
+      'num_upcoming_shows': len(new_show)
+    })"""
+  data=[]
 
-  
+  areas = db.session.query(Venue.city, Venue.state).distinct(Venue.city, Venue.state)
 
   for area in areas:
-    list_of_venues = []
-    for venue in venues:
-    # add the town +state as a tuples
-      areas.add((venue.city, venue.state))
-      new_shows = [show for show in venue.shows if show.start_time > datetime.now]
-      if (venue.city == areas[0]) and (venue.state == areas[1]):
-        venue_shows = Show.query.filter_by(venue_id=venue.id).all()
-      list_of_venues.append({
-          "id":venue.id,
-          "name":venue.name,
-          "num_upcoming_shows": new_shows
-        })  
-
-    data.append({
-      "city": areas[0],
-      "state": areas[1],
-      "venues": list_of_venues
-    })
-
-
-  
+      venues_in_area = db.session.query(Venue.id, Venue.name).filter(Venue.city == area[0]).filter(Venue.state == area[1])
+      data.append({
+        "city": area[0],
+        "state": area[1],
+        "venues": venues_in_area
+      })  
   return render_template('pages/venues.html', areas=data);
 
 @app.route('/venues/search', methods=['POST'])
@@ -167,7 +160,7 @@ def show_venue(venue_id):
 
 @app.route('/venues/create', methods=['GET'])
 def create_venue_form():
-  form = VenueForm(request.form)
+  form = VenueForm()
   return render_template('forms/new_venue.html', form=form)
 
 @app.route('/venues/create', methods=['POST'])
@@ -176,14 +169,14 @@ def create_venue_submission():
   # TODO: modify data to be the data object returned from db insertion
   error = False
   #get the data
-  form = VenueForm()
+  form = VenueForm(request.form)
   
   #venue = Venue.query.filter_by(id=venue_id).first()
-  if form.validate():
+  #if form.validate():
 
-    try:
+  
 
-      venue = Venue(
+  venue = Venue(
         name = form.name.data,
         city = form.city.data,
         state = form.state.data,
@@ -197,23 +190,23 @@ def create_venue_submission():
         genres = request.form.getlist('genres'),
   
       ) 
-      db.session.add(venue)
-      db.session.commit()
-    except:
-      error=True
-      db.session.rollback()
-      flash('An error occurred. Venue ' + venue.name + ' could not be listed.')
-      print(sys.exc_info())
-    finally:
+  try:  
+    db.session.add(venue)
+    db.session.commit()
+    # TODO: on unsuccessful db insert, flash an error instead.
+
+      # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
+      # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
+      # on successful db insert, flash success
+    flash('Venue ' + form.name.data + ' was successfully listed!')
+  except:
+    error=True
+    db.session.rollback()
+    flash('An error occurred. Venue ' + form.name.data + ' could not be listed.')
+    print(sys.exc_info())
+  finally:
       db.session.close()
   
-
-  # on successful db insert, flash success
-  flash('Venue ' + request.form['name'] + ' was successfully listed!')
-  # TODO: on unsuccessful db insert, flash an error instead.
-
-  # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
-  # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   return render_template('pages/home.html', form=form)
 
 @app.route('/venues/<venue_id>', methods=['DELETE'])
@@ -437,14 +430,9 @@ def create_artist_submission():
 
   error = False
   #get the data
-  form = ArtistForm()
+  form = ArtistForm(request.form)
   
-  #venue = Venue.query.filter_by(id=venue_id).first()
-  if form.validate():
-
-    try:
-
-      artist = Artist(
+  artist = Artist(
         name = form.name.data,
         city = form.city.data,
         state = form.state.data,
@@ -457,24 +445,24 @@ def create_artist_submission():
         looking_description = form.looking_description.data,
         
   
-      ) 
-      db.session.add(artist)
-      db.session.commit()
-    except:
-      error=True
-      db.session.rollback()
-      flash('An error occurred. Venue ' + artist.name + ' could not be listed.')
-      print(sys.exc_info())
-    finally:
-      db.session.close()
+      )
+  try:   
+    db.session.add(artist)
+    db.session.commit()
+    # on successful db insert, flash success
+    flash('Artist ' + request.form['name'] + ' was successfully listed!')
+    # TODO: on unsuccessful db insert, flash an error instead.
+
+    # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
+    # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
+  except:
+    error=True
+    db.session.rollback()
+    flash('An error occurred. Venue ' + artist.name + ' could not be listed.')
+    print(sys.exc_info())
+  finally:
+    db.session.close()
   
-
-  # on successful db insert, flash success
-  flash('Artist ' + request.form['name'] + ' was successfully listed!')
-  # TODO: on unsuccessful db insert, flash an error instead.
-
-  # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
-  # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   return render_template('pages/home.html', form=form)
 
 #  Shows
@@ -492,8 +480,8 @@ def shows():
     details = {'venue_id': show.venue_id ,
               'venue_name': Venue.query.filter_by(id=show.venue_id).first().name,
               'artist_id': show.artist_id,
-              'artist_name': Artist.query.filter_by(id-show.artist_id).first().name,
-              'artist_image_link': Artist.query.fillter_by(id-show.artist_id).first().image_link,
+              'artist_name': Artist.query.filter_by(id=show.artist_id).first().name,
+              'artist_image_link': Artist.query.filter_by(id=show.artist_id).first().image_link,
               'start_time': format_datetime(str(show.start_time))
               }
     # append it to the empty list          
