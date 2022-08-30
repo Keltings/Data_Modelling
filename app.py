@@ -83,10 +83,10 @@ def search_venues():
   # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
   # find all venues matching a word and should be case insesitive
   venue_searched = request.form.get('search_term', '')
-  venue_queried = Venue.query.filter(Venue.name.ilike('%' + venue_searched + '%')).count()
+  venue_queried = Venue.query.filter(Venue.name.ilike('%' + venue_searched + '%'))
   response={
-    "count": venue_queried,
-    "data": venue_searched
+    "count": venue_queried.count(),
+    "data": venue_queried
   }
   return render_template('pages/search_venues.html', results=response, search_term=venue_searched)
 
@@ -100,7 +100,7 @@ def show_venue(venue_id):
   # get all venues by the venue_id
   queried_venue = Venue.query.filter_by(id=venue_id).first()
   #also get all shows using the venue id as a filter
-  queried_show = Show.query.filter_by(venue_id=venue_id)
+  queried_show = db.session.query(Show).join(Venue).filter(Show.venue_id==venue_id).all()
   new_shows = []
   past_shows = []
 
@@ -115,12 +115,13 @@ def show_venue(venue_id):
 
 #past shows 
   for show in queried_show:
+    artist = db.session.query(Artist.name, Artist.image_link).filter(Artist.id == show.artist_id).one()
     if show.start_time < datetime.now():
       past_shows.append({
                "artist_id": show.artist_id,
-                "artist_name": Artist.query.filter_by(id=show.artist_id).all(),#.name,
-                "artist_image_link": Artist.query.filter_by(id=show.artist_id).all(),#image_link,
-                "start_time": format_datetime(str(show.start_time))
+                "artist_name": artist.name,
+                "artist_image_link": artist.image_link,
+                "start_time": format_datetime(str(show.start_time)),
                 })
   
   if queried_venue:
@@ -164,7 +165,7 @@ def create_venue_submission():
   form = VenueForm(request.form)
   
   #venue = Venue.query.filter_by(id=venue_id).first()
-  #if form.validate():
+  
 
   venue = Venue(
         name = form.name.data,
@@ -181,22 +182,28 @@ def create_venue_submission():
   
       ) 
   
-  try:  
-    db.session.add(venue)
-    db.session.commit()
+    
+  try:
+    if form.validate():  
+      db.session.add(venue)
+      db.session.commit()
     # TODO: on unsuccessful db insert, flash an error instead.
 
       # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
       # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
       # on successful db insert, flash success
-    flash('Venue ' + form.name.data + ' was successfully listed!')
+      flash('Venue ' + form.name.data + ' was successfully listed!')
+    else:
+        for field, message in form.errors.items():
+            flash(field + ' - ' + str(message), 'danger')  
   except:
-    error=True
-    db.session.rollback()
-    flash('An error occurred. Venue ' + form.name.data + ' could not be listed.')
-    print(sys.exc_info())
+      error=True
+      db.session.rollback()
+      flash('An error occurred. Venue ' + form.name.data + ' could not be listed.')
+      print(sys.exc_info())
   finally:
       db.session.close()
+      
   
   return render_template('pages/home.html', form=form)
 
@@ -263,7 +270,8 @@ def show_artist(artist_id):
   # get all venues by the venue_id
   queried_artist = Artist.query.filter_by(id=artist_id).first()
   #also get all shows using the venue id as a filter
-  queried_show = Show.query.filter_by(artist_id=artist_id)
+  queried_show = db.session.query(Show).join(Artist).filter(Show.artist_id==artist_id).all()
+  new_shows = []
   new_shows = []
   past_shows = []
 
