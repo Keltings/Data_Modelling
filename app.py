@@ -195,7 +195,8 @@ def create_venue_submission():
       flash('Venue ' + form.name.data + ' was successfully listed!')
     else:
         for field, message in form.errors.items():
-            flash(field + ' - ' + str(message), 'danger')  
+            flash(field + ' - ' + str(message), 'danger') 
+            return render_template('pages/new_venue.html', form=form)     
   except:
       error=True
       db.session.rollback()
@@ -470,12 +471,13 @@ def create_artist_submission():
   
       )
   
-  try:   
-    db.session.add(artist)
-    db.session.commit()
-    # on successful db insert, flash success
-    flash('Artist ' + request.form['name'] + ' was successfully listed!')
-    # TODO: on unsuccessful db insert, flash an error instead.
+  try:
+    if form.validate():   
+      db.session.add(artist)
+      db.session.commit()
+      # on successful db insert, flash success
+      flash('Artist ' + request.form['name'] + ' was successfully listed!')
+      # TODO: on unsuccessful db insert, flash an error instead.
 
     # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
     # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
