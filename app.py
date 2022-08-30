@@ -15,7 +15,7 @@ from flask_wtf import Form
 from forms import *
 from flask_migrate import Migrate
 import sys
-from models import Venue, Show, Artist
+from models import Venue, Show, Artist, db_setup
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -23,9 +23,10 @@ from models import Venue, Show, Artist
 
 app = Flask(__name__)
 moment = Moment(app)
-app.config.from_object('config')
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
+#app.config.from_object('config')
+##db.init_app(app)
+db = db_setup(app)
+#migrate = Migrate(app, db)
 
 # TODO: connect to a local postgresql database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:#Datascience1@localhost:5432/postgres'
@@ -196,7 +197,7 @@ def create_venue_submission():
     else:
         for field, message in form.errors.items():
             flash(field + ' - ' + str(message), 'danger') 
-            return render_template('pages/new_venue.html', form=form)     
+                 
   except:
       error=True
       db.session.rollback()
@@ -253,11 +254,11 @@ def search_artists():
   # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
   # search for "band" should return "The Wild Sax Band".
    artist_searched = request.form.get('search_term', '')
-   artist_queried = Artist.query.filter(Venue.name.ilike('%' + artist_searched + '%')).count()
-   artist_data = []
+   artist_queried = Artist.query.filter(Artist.name.ilike('%' + artist_searched + '%'))
+   
 
    response = {
-    "count": artist_queried,
+    "count": artist_queried.count(),
     "data": artist_searched
   }
    return render_template('pages/search_artists.html', results=response, search_term=artist_searched)
@@ -478,7 +479,10 @@ def create_artist_submission():
       # on successful db insert, flash success
       flash('Artist ' + request.form['name'] + ' was successfully listed!')
       # TODO: on unsuccessful db insert, flash an error instead.
-
+    else:
+        for field, message in form.errors.items():
+            flash(field + ' - ' + str(message), 'danger') 
+            return render_template('pages/new_venue.html', form=form)  
     # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
     # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   except:
@@ -532,20 +536,25 @@ def create_show_submission():
   body = {}
   error=False
   try:
-    artist_id = request.form['artist_id']
-    venue_id = request.form['venue_id']
-    start_time = request.form['start_time']
+    if form.validate():
+      artist_id = request.form['artist_id']
+      venue_id = request.form['venue_id']
+      start_time = request.form['start_time']
 
-    show = Show(artist_id=artist_id, venue_id=venue_id, start_time=start_time)
+      show = Show(artist_id=artist_id, venue_id=venue_id, start_time=start_time)
     
-    db.session.add(show)
-    db.session.commit()
-    body['id'] = show.id
-    body['artist_id'] = show.artist_id
-    body['venue_id'] = show.venue_id
-    body['start_time'] = show.start_time
-    # on successful db insert, flash success
-    flash('Show was successfully listed!')
+      db.session.add(show)
+      db.session.commit()
+      body['id'] = show.id
+      body['artist_id'] = show.artist_id
+      body['venue_id'] = show.venue_id
+      body['start_time'] = show.start_time
+      # on successful db insert, flash success
+      flash('Show was successfully listed!')
+    else:
+        for field, message in form.errors.items():
+            flash(field + ' - ' + str(message), 'danger') 
+            return render_template('pages/new_venue.html', form=form)   
 
   except:
       error=True
@@ -587,7 +596,7 @@ if not app.debug:
 
 # Default port:
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0')
 
 # Or specify port manually:
 '''
